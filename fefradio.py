@@ -1,40 +1,13 @@
 import pathlib
 import time
 
-import click
 import spotipy
 import spotipy.oauth2
 
 
-@click.group()
-def cli():
-    pass
-
-
-@cli.command()
-def setup():
-    client_id_path = pathlib.Path("client_id.txt")
-
-    if client_id_path.exists():
-        if click.confirm("A client ID already exists. Do you want to overwrite it?"):
-            client_id_path.unlink()
-        else:
-            click.echo("Setup aborted.")
-            return
-
-    client_id = click.prompt("Please enter your Spotify app client ID")
-    client_id_path.write_text(client_id)
-    click.echo("Client ID saved successfully.")
-
-
 def connect() -> spotipy.Spotify:
     client_id_path = pathlib.Path("client_id.txt")
-
-    if client_id_path.exists():
-        client_id = client_id_path.read_text().strip()
-    else:
-        click.echo("Client ID is missing. Please run `fefradio setup` to configure it.")
-        exit(1)
+    client_id = client_id_path.read_text().strip()
     
     scope = "user-read-currently-playing"
 
@@ -64,7 +37,10 @@ def clear_playlist():
 
 
 def get_now_playing(spotify: spotipy.Spotify) -> dict | None:
-    now_playing = spotify.current_user_playing_track()
+    try:
+        now_playing = spotify.current_user_playing_track()
+    except:
+        return get_now_playing(spotify)
 
     if now_playing:
         track = now_playing["item"]
@@ -95,11 +71,13 @@ def update_progress(track: dict):
         file.write(f"{track['progress']} / {track['duration']}")
 
 
-@cli.command()
 def run():
-    click.echo("FEF Radio Tools is running... Press Ctrl+C to stop.")
+    print("FEF Radio Tools is running... Ctrl-C to stop.")
+    
     clear_playlist()
+
     spotify = connect()
+    
     now_playing_id = None
 
     while True:
@@ -118,4 +96,4 @@ def run():
 
 
 if __name__ == "__main__":
-    cli()
+    run()
